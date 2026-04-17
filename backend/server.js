@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
+const authRoutes = require("./routes/authRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const Inventory = require("./models/Inventory");
 
 const seedInventory = async () => {
@@ -47,8 +49,10 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/chat", chatRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)
