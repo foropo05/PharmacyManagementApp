@@ -15,6 +15,7 @@ function App() {
     dosage: "",
     quantity: ""
   });
+  const medicationOptions = [...new Set(inventory.map((item) => item.medicationName))];
 
   const fetchPrescriptions = () => {
     fetch(`${API_BASE}/api/prescriptions`)
@@ -101,11 +102,17 @@ function App() {
           value={form.patientName}
           onChange={(e) => setForm({ ...form, patientName: e.target.value })}
         />
-        <input
-          placeholder="Medication"
+        <select
           value={form.medication}
           onChange={(e) => setForm({ ...form, medication: e.target.value })}
-        />
+        >
+          <option value="">Select Medication</option>
+          {medicationOptions.map((med) => (
+            <option key={med} value={med}>
+              {med}
+            </option>
+          ))}
+        </select>
         <input
           placeholder="Dosage"
           value={form.dosage}

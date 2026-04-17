@@ -4,6 +4,44 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
+const Inventory = require("./models/Inventory");
+
+const seedInventory = async () => {
+  const meds = [
+    "tylenol",
+    "ibuprofen",
+    "amoxicillin",
+    "paracetamol",
+    "aspirin",
+    "cetirizine",
+    "metformin",
+    "atorvastatin",
+    "lisinopril",
+    "omeprazole",
+    "azithromycin",
+    "salbutamol"
+  ];
+
+  for (const med of meds) {
+    const exists = await Inventory.findOne({ medicationName: med });
+
+    if (!exists) {
+      await Inventory.create({
+        medicationName: med,
+        stock: 10,
+        minimumStock: 3
+      });
+    }
+  }
+
+  // Normalize legacy bad data from earlier versions.
+  await Inventory.updateMany(
+    { stock: { $lt: 0 } },
+    { $set: { stock: 0 } }
+  );
+
+  console.log("Inventory seed check complete");
+};
 
 const app = express();
 
@@ -14,8 +52,11 @@ app.use("/api/inventory", inventoryRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log("MongoDB connection error:", err.message));
+  .then(async () => {
+    console.log("MongoDB connected");
+    await seedInventory();
+  })
+  .catch((err) => console.log(err));
 
 app.get("/", (req, res) => {
   res.send("Pharmacy Management Backend is running");

@@ -29,8 +29,16 @@ router.put("/:id/dispense", async (req, res) => {
   try {
     const prescription = await Prescription.findById(req.params.id);
 
-    const item = await Inventory.findOne({
-      medicationName: prescription.medication
+    if (!prescription) {
+      return res.status(404).json({ error: "Prescription not found" });
+    }
+
+    if (prescription.status === "Dispensed") {
+      return res.status(400).json({ error: "Prescription already dispensed" });
+    }
+
+    const item = await Inventory.findOne({ medicationName: prescription.medication }).sort({
+      stock: -1
     });
 
     // check stock
