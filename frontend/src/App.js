@@ -1,25 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate
+} from "react-router-dom";
+import { FaComments, FaPaperPlane, FaPencilAlt, FaPlus, FaRobot, FaTimes, FaTrashAlt } from "react-icons/fa";
 import "./App.css";
 
 const API_BASE = "http://localhost:5000";
-
-function MenuDropdown({ label, links }) {
-  return (
-    <div className="menu-dropdown">
-      <button type="button" className="menu-trigger">
-        {label}
-      </button>
-      <div className="menu-list">
-        {links.map((link) => (
-          <NavLink key={link.to} to={link.to} className="menu-item">
-            {link.label}
-          </NavLink>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function AppHeader({ currentUser, onLogout }) {
   return (
@@ -27,34 +19,18 @@ function AppHeader({ currentUser, onLogout }) {
       <div className="topbar">
         <h1 className="brand-title">Pharmacy Management</h1>
         <nav className="topnav">
-          <MenuDropdown
-            label="Medications"
-            links={[
-              { to: "/inventory/view", label: "View" },
-              { to: "/inventory/add", label: "Add" },
-              { to: "/inventory/edit", label: "Edit" }
-            ]}
-          />
-          <MenuDropdown
-            label="Patients"
-            links={[
-              { to: "/patients/view", label: "View" },
-              { to: "/patients/add", label: "Add" },
-              { to: "/patients/edit", label: "Edit" }
-            ]}
-          />
-          <MenuDropdown
-            label="Prescriptions"
-            links={[
-              { to: "/prescriptions/view", label: "View" },
-              { to: "/prescriptions/add", label: "Add" },
-              { to: "/prescriptions/edit", label: "Edit" }
-            ]}
-          />
-          <MenuDropdown
-            label="Reports"
-            links={[{ to: "/reports", label: "View Reports" }]}
-          />
+          <NavLink to="/inventory/view" className="topnav-link">
+            Medications
+          </NavLink>
+          <NavLink to="/patients/view" className="topnav-link">
+            Patients
+          </NavLink>
+          <NavLink to="/prescriptions/view" className="topnav-link">
+            Prescriptions
+          </NavLink>
+          <NavLink to="/reports" className="topnav-link">
+            Reports
+          </NavLink>
         </nav>
       </div>
       <div className="topbar-sub">
@@ -125,9 +101,22 @@ function SectionCard({ title, children }) {
   );
 }
 
-function InventoryView({ inventory, onDelete }) {
+function ViewTools({ lineText, onAdd }) {
+  return (
+    <div className="section-tools">
+      <p className="section-line">{lineText}</p>
+      <button type="button" className="secondary-btn" onClick={onAdd}>
+        <FaPlus aria-hidden="true" />
+        <span>Add</span>
+      </button>
+    </div>
+  );
+}
+
+function InventoryView({ inventory, onAdd, onEdit, onDelete }) {
   return (
     <SectionCard title="Medications - View">
+      <ViewTools lineText="View medications" onAdd={onAdd} />
       <table className="data-table">
         <thead>
           <tr>
@@ -146,8 +135,13 @@ function InventoryView({ inventory, onDelete }) {
               <td>{item.minimumStock}</td>
               <td>{item.stock <= item.minimumStock ? "Low Stock" : "OK"}</td>
               <td>
+                <button type="button" className="secondary-btn" onClick={() => onEdit(item._id)}>
+                  <FaPencilAlt aria-hidden="true" />
+                  <span>Edit</span>
+                </button>
                 <button type="button" className="danger-btn" onClick={() => onDelete(item._id)}>
-                  Delete
+                  <FaTrashAlt aria-hidden="true" />
+                  <span>Delete</span>
                 </button>
               </td>
             </tr>
@@ -197,7 +191,8 @@ function InventoryAdd({ onAdd }) {
 }
 
 function InventoryEdit({ inventory, onEdit, onDelete }) {
-  const [selectedId, setSelectedId] = useState("");
+  const location = useLocation();
+  const [selectedId, setSelectedId] = useState(location.state?.selectedId || "");
   const selected = useMemo(
     () => inventory.find((item) => item._id === selectedId) || null,
     [inventory, selectedId]
@@ -213,6 +208,12 @@ function InventoryEdit({ inventory, onEdit, onDelete }) {
       });
     }
   }, [selected]);
+
+  useEffect(() => {
+    if (location.state?.selectedId) {
+      setSelectedId(location.state.selectedId);
+    }
+  }, [location.state]);
 
   return (
     <SectionCard title="Medications - Edit">
@@ -253,7 +254,8 @@ function InventoryEdit({ inventory, onEdit, onDelete }) {
           />
           <button type="submit">Update Medication</button>
           <button type="button" className="danger-btn" onClick={() => onDelete(selected._id)}>
-            Delete Medication
+            <FaTrashAlt aria-hidden="true" />
+            <span>Delete Medication</span>
           </button>
         </form>
       )}
@@ -261,9 +263,10 @@ function InventoryEdit({ inventory, onEdit, onDelete }) {
   );
 }
 
-function PatientsView({ patients, onDelete }) {
+function PatientsView({ patients, onAdd, onEdit, onDelete }) {
   return (
     <SectionCard title="Patients - View">
+      <ViewTools lineText="View patients" onAdd={onAdd} />
       <table className="data-table">
         <thead>
           <tr>
@@ -280,12 +283,17 @@ function PatientsView({ patients, onDelete }) {
               <td>{patient.phone || "-"}</td>
               <td>{patient.dateOfBirth || "-"}</td>
               <td>
+                <button type="button" className="secondary-btn" onClick={() => onEdit(patient._id)}>
+                  <FaPencilAlt aria-hidden="true" />
+                  <span>Edit</span>
+                </button>
                 <button
                   type="button"
                   className="danger-btn"
                   onClick={() => onDelete(patient._id)}
                 >
-                  Delete
+                  <FaTrashAlt aria-hidden="true" />
+                  <span>Delete</span>
                 </button>
               </td>
             </tr>
@@ -332,7 +340,8 @@ function PatientsAdd({ onAdd }) {
 }
 
 function PatientsEdit({ patients, onEdit, onDelete }) {
-  const [selectedId, setSelectedId] = useState("");
+  const location = useLocation();
+  const [selectedId, setSelectedId] = useState(location.state?.selectedId || "");
   const selected = useMemo(
     () => patients.find((patient) => patient._id === selectedId) || null,
     [patients, selectedId]
@@ -348,6 +357,12 @@ function PatientsEdit({ patients, onEdit, onDelete }) {
       });
     }
   }, [selected]);
+
+  useEffect(() => {
+    if (location.state?.selectedId) {
+      setSelectedId(location.state.selectedId);
+    }
+  }, [location.state]);
 
   return (
     <SectionCard title="Patients - Edit">
@@ -386,7 +401,8 @@ function PatientsEdit({ patients, onEdit, onDelete }) {
           />
           <button type="submit">Update Patient</button>
           <button type="button" className="danger-btn" onClick={() => onDelete(selected._id)}>
-            Delete Patient
+            <FaTrashAlt aria-hidden="true" />
+            <span>Delete Patient</span>
           </button>
         </form>
       )}
@@ -394,9 +410,10 @@ function PatientsEdit({ patients, onEdit, onDelete }) {
   );
 }
 
-function PrescriptionsView({ prescriptions, onDispense, onDelete }) {
+function PrescriptionsView({ prescriptions, onAdd, onEdit, onDispense, onDelete }) {
   return (
     <SectionCard title="Prescriptions - View">
+      <ViewTools lineText="View prescriptions" onAdd={onAdd} />
       <table className="data-table">
         <thead>
           <tr>
@@ -417,6 +434,14 @@ function PrescriptionsView({ prescriptions, onDispense, onDelete }) {
               <td>{prescription.quantity}</td>
               <td>{prescription.status}</td>
               <td>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => onEdit(prescription._id)}
+                >
+                  <FaPencilAlt aria-hidden="true" />
+                  <span>Edit</span>
+                </button>
                 {prescription.status !== "Dispensed" && (
                   <button type="button" onClick={() => onDispense(prescription._id)}>
                     Dispense
@@ -427,7 +452,8 @@ function PrescriptionsView({ prescriptions, onDispense, onDelete }) {
                   className="danger-btn"
                   onClick={() => onDelete(prescription._id)}
                 >
-                  Delete
+                  <FaTrashAlt aria-hidden="true" />
+                  <span>Delete</span>
                 </button>
               </td>
             </tr>
@@ -497,7 +523,8 @@ function PrescriptionsAdd({ onAdd, patients, inventory }) {
 }
 
 function PrescriptionsEdit({ prescriptions, inventory, onEdit, onDelete }) {
-  const [selectedId, setSelectedId] = useState("");
+  const location = useLocation();
+  const [selectedId, setSelectedId] = useState(location.state?.selectedId || "");
   const selected = useMemo(
     () => prescriptions.find((prescription) => prescription._id === selectedId) || null,
     [prescriptions, selectedId]
@@ -521,6 +548,12 @@ function PrescriptionsEdit({ prescriptions, inventory, onEdit, onDelete }) {
       });
     }
   }, [selected]);
+
+  useEffect(() => {
+    if (location.state?.selectedId) {
+      setSelectedId(location.state.selectedId);
+    }
+  }, [location.state]);
 
   return (
     <SectionCard title="Prescriptions - Edit">
@@ -577,7 +610,8 @@ function PrescriptionsEdit({ prescriptions, inventory, onEdit, onDelete }) {
           </select>
           <button type="submit">Update Prescription</button>
           <button type="button" className="danger-btn" onClick={() => onDelete(selected._id)}>
-            Delete Prescription
+            <FaTrashAlt aria-hidden="true" />
+            <span>Delete Prescription</span>
           </button>
         </form>
       )}
@@ -614,11 +648,66 @@ function ReportsPage({ prescriptions, patients, inventory }) {
   );
 }
 
+function ChatWidget({ isOpen, onOpen, onClose, messages, chatInput, chatLoading, onInputChange, onSend }) {
+  if (!isOpen) {
+    return (
+      <button type="button" className="chat-fab" onClick={onOpen} aria-label="Open chat">
+        <FaComments aria-hidden="true" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="chat-panel">
+      <div className="chat-panel-header">
+        <h3>
+          <FaRobot aria-hidden="true" />
+          <span>PharmacyBot</span>
+        </h3>
+        <button type="button" className="chat-close-btn" onClick={onClose} aria-label="Close chat">
+          <FaTimes aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="chat-box">
+        {messages.map((msg, index) => (
+          <p
+            key={`${msg.role}-${index}`}
+            className={msg.role === "user" ? "chat-msg chat-msg-user" : "chat-msg chat-msg-assistant"}
+          >
+            {msg.text}
+          </p>
+        ))}
+      </div>
+
+      <form className="chat-form" onSubmit={onSend}>
+        <input
+          placeholder="Ask me anything..."
+          value={chatInput}
+          onChange={(e) => onInputChange(e.target.value)}
+        />
+        <button type="submit" disabled={chatLoading} className="chat-send-btn" aria-label="Send message">
+          <FaPaperPlane aria-hidden="true" />
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function AppShell({ currentUser, onLogout }) {
   const navigate = useNavigate();
   const [prescriptions, setPrescriptions] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      text: "Hi! I'm PharmacyBot. Ask me about patients, medications, prescriptions, or reports!"
+    }
+  ]);
 
   const fetchPrescriptions = useCallback(async () => {
     const res = await fetch(`${API_BASE}/api/prescriptions`);
@@ -678,6 +767,14 @@ function AppShell({ currentUser, onLogout }) {
     navigate("/inventory/view");
   };
 
+  const openInventoryAdd = () => {
+    navigate("/inventory/add");
+  };
+
+  const openInventoryEdit = (id) => {
+    navigate("/inventory/edit", { state: { selectedId: id } });
+  };
+
   const createPatient = async (payload) => {
     await fetch(`${API_BASE}/api/patients`, {
       method: "POST",
@@ -708,6 +805,14 @@ function AppShell({ currentUser, onLogout }) {
     });
     await fetchPatients();
     navigate("/patients/view");
+  };
+
+  const openPatientAdd = () => {
+    navigate("/patients/add");
+  };
+
+  const openPatientEdit = (id) => {
+    navigate("/patients/edit", { state: { selectedId: id } });
   };
 
   const createPrescription = async (payload) => {
@@ -742,6 +847,14 @@ function AppShell({ currentUser, onLogout }) {
     navigate("/prescriptions/view");
   };
 
+  const openPrescriptionAdd = () => {
+    navigate("/prescriptions/add");
+  };
+
+  const openPrescriptionEdit = (id) => {
+    navigate("/prescriptions/edit", { state: { selectedId: id } });
+  };
+
   const dispensePrescription = async (id) => {
     const res = await fetch(`${API_BASE}/api/prescriptions/${id}/dispense`, {
       method: "PUT"
@@ -756,6 +869,38 @@ function AppShell({ currentUser, onLogout }) {
     await refreshAll();
   };
 
+  const sendChatMessage = async (e) => {
+    e.preventDefault();
+    const message = chatInput.trim();
+
+    if (!message) {
+      return;
+    }
+
+    setChatMessages((prev) => [...prev, { role: "user", text: message }]);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/chat/help`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      const reply = data.reply || "I could not generate a response.";
+      setChatMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "Server unavailable. Please try again." }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   return (
     <div className="app-shell">
       <AppHeader currentUser={currentUser} onLogout={onLogout} />
@@ -765,7 +910,14 @@ function AppShell({ currentUser, onLogout }) {
 
           <Route
             path="/inventory/view"
-            element={<InventoryView inventory={inventory} onDelete={deleteInventory} />}
+            element={
+              <InventoryView
+                inventory={inventory}
+                onAdd={openInventoryAdd}
+                onEdit={openInventoryEdit}
+                onDelete={deleteInventory}
+              />
+            }
           />
           <Route path="/inventory/add" element={<InventoryAdd onAdd={createInventory} />} />
           <Route
@@ -781,7 +933,14 @@ function AppShell({ currentUser, onLogout }) {
 
           <Route
             path="/patients/view"
-            element={<PatientsView patients={patients} onDelete={deletePatient} />}
+            element={
+              <PatientsView
+                patients={patients}
+                onAdd={openPatientAdd}
+                onEdit={openPatientEdit}
+                onDelete={deletePatient}
+              />
+            }
           />
           <Route path="/patients/add" element={<PatientsAdd onAdd={createPatient} />} />
           <Route
@@ -796,6 +955,8 @@ function AppShell({ currentUser, onLogout }) {
             element={
               <PrescriptionsView
                 prescriptions={prescriptions}
+                onAdd={openPrescriptionAdd}
+                onEdit={openPrescriptionEdit}
                 onDispense={dispensePrescription}
                 onDelete={deletePrescription}
               />
@@ -825,6 +986,17 @@ function AppShell({ currentUser, onLogout }) {
           <Route path="*" element={<Navigate to="/inventory/view" replace />} />
         </Routes>
       </main>
+
+      <ChatWidget
+        isOpen={isChatOpen}
+        onOpen={() => setIsChatOpen(true)}
+        onClose={() => setIsChatOpen(false)}
+        messages={chatMessages}
+        chatInput={chatInput}
+        chatLoading={chatLoading}
+        onInputChange={setChatInput}
+        onSend={sendChatMessage}
+      />
     </div>
   );
 }
