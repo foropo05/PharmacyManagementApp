@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
+const patientRoutes = require("./routes/patientRoutes");
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const Inventory = require("./models/Inventory");
@@ -52,6 +53,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/patients", patientRoutes);
 app.use("/api/chat", chatRoutes);
 
 mongoose

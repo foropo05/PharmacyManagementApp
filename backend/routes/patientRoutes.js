@@ -1,38 +1,38 @@
 const express = require("express");
 const router = express.Router();
-const Inventory = require("../models/Inventory");
+const Patient = require("../models/Patient");
 
-// CREATE inventory item
+// CREATE patient
 router.post("/", async (req, res) => {
   try {
-    const item = new Inventory(req.body);
-    const saved = await item.save();
+    const patient = new Patient(req.body);
+    const saved = await patient.save();
     res.json(saved);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET all inventory
+// GET all patients
 router.get("/", async (req, res) => {
   try {
-    const items = await Inventory.find();
-    res.json(items);
+    const patients = await Patient.find().sort({ createdAt: -1 });
+    res.json(patients);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// UPDATE inventory item
+// EDIT patient
 router.put("/:id", async (req, res) => {
   try {
-    const updated = await Inventory.findByIdAndUpdate(req.params.id, req.body, {
+    const updated = await Patient.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
     });
 
     if (!updated) {
-      return res.status(404).json({ error: "Inventory item not found" });
+      return res.status(404).json({ error: "Patient not found" });
     }
 
     res.json(updated);
@@ -41,16 +41,16 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE inventory item
+// DELETE patient
 router.delete("/:id", async (req, res) => {
   try {
-    const deleted = await Inventory.findByIdAndDelete(req.params.id);
+    const deleted = await Patient.findByIdAndDelete(req.params.id);
 
     if (!deleted) {
-      return res.status(404).json({ error: "Inventory item not found" });
+      return res.status(404).json({ error: "Patient not found" });
     }
 
-    res.json({ message: "Inventory item deleted" });
+    res.json({ message: "Patient deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

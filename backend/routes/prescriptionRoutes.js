@@ -24,6 +24,39 @@ router.get("/", async (req, res) => {
   }
 });
 
+// EDIT prescription
+router.put("/:id", async (req, res) => {
+  try {
+    const updated = await Prescription.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: "Prescription not found" });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE prescription
+router.delete("/:id", async (req, res) => {
+  try {
+    const deleted = await Prescription.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Prescription not found" });
+    }
+
+    res.json({ message: "Prescription deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // UPDATE (dispense)
 router.put("/:id/dispense", async (req, res) => {
   try {
