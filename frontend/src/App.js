@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -8,17 +8,69 @@ import {
   useLocation,
   useNavigate
 } from "react-router-dom";
-import { FaComments, FaPaperPlane, FaPencilAlt, FaPlus, FaRobot, FaTimes, FaTrashAlt } from "react-icons/fa";
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaCaretDown,
+  FaComments,
+  FaPaperPlane,
+  FaPencilAlt,
+  FaPlus,
+  FaRobot,
+  FaTimes,
+  FaTrashAlt
+} from "react-icons/fa";
 import "./App.css";
 
 const API_BASE = "http://localhost:5000";
 
 function AppHeader({ currentUser, onLogout }) {
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const tabOrder = ["/home", "/inventory/view", "/patients/view", "/prescriptions/view"];
+
+  const resolveCurrentTab = (path) => {
+    if (path.startsWith("/inventory")) return "/inventory/view";
+    if (path.startsWith("/patients")) return "/patients/view";
+    if (path.startsWith("/prescriptions")) return "/prescriptions/view";
+    return "/home";
+  };
+
+  const currentTab = resolveCurrentTab(location.pathname);
+  const currentIndex = Math.max(tabOrder.indexOf(currentTab), 0);
+
+  const goToPreviousTab = () => {
+    const prevIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+    navigate(tabOrder[prevIndex]);
+  };
+
+  const goToNextTab = () => {
+    const nextIndex = (currentIndex + 1) % tabOrder.length;
+    navigate(tabOrder[nextIndex]);
+  };
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, []);
+
   return (
     <header className="topbar-wrap">
       <div className="topbar">
         <h1 className="brand-title">Pharmacy Management</h1>
         <nav className="topnav">
+          <NavLink to="/home" className="topnav-link">
+            Home
+          </NavLink>
           <NavLink to="/inventory/view" className="topnav-link">
             Medications
           </NavLink>
@@ -28,18 +80,42 @@ function AppHeader({ currentUser, onLogout }) {
           <NavLink to="/prescriptions/view" className="topnav-link">
             Prescriptions
           </NavLink>
-          <NavLink to="/reports" className="topnav-link">
-            Reports
-          </NavLink>
         </nav>
       </div>
       <div className="topbar-sub">
-        <span>
-          Signed in as {currentUser.name} ({currentUser.email})
-        </span>
-        <button type="button" className="ghost-btn" onClick={onLogout}>
-          Logout
-        </button>
+        <div className="tab-nav-controls">
+          <button type="button" className="tab-nav-btn" onClick={goToPreviousTab}>
+            <FaChevronLeft aria-hidden="true" />
+          </button>
+          <button type="button" className="tab-nav-btn" onClick={goToNextTab}>
+            <FaChevronRight aria-hidden="true" />
+          </button>
+        </div>
+        <div className="user-menu" ref={userMenuRef}>
+          <button
+            type="button"
+            className="user-chip"
+            onClick={() => setIsUserMenuOpen((prev) => !prev)}
+          >
+            <span>{currentUser.name}</span>
+            <FaCaretDown aria-hidden="true" />
+          </button>
+
+          {isUserMenuOpen && (
+            <div className="user-menu-panel">
+              <button
+                type="button"
+                className="user-menu-item"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  onLogout();
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -101,13 +177,13 @@ function SectionCard({ title, children }) {
   );
 }
 
-function ViewTools({ lineText, onAdd }) {
+function ViewTools({ lineText, onAdd, addLabel }) {
   return (
     <div className="section-tools">
       <p className="section-line">{lineText}</p>
       <button type="button" className="secondary-btn" onClick={onAdd}>
         <FaPlus aria-hidden="true" />
-        <span>Add</span>
+        <span>{addLabel}</span>
       </button>
     </div>
   );
@@ -116,7 +192,7 @@ function ViewTools({ lineText, onAdd }) {
 function InventoryView({ inventory, onAdd, onEdit, onDelete }) {
   return (
     <SectionCard title="Medications - View">
-      <ViewTools lineText="View medications" onAdd={onAdd} />
+      <ViewTools lineText="View medications" onAdd={onAdd} addLabel="Add Medication" />
       <table className="data-table">
         <thead>
           <tr>
@@ -266,7 +342,7 @@ function InventoryEdit({ inventory, onEdit, onDelete }) {
 function PatientsView({ patients, onAdd, onEdit, onDelete }) {
   return (
     <SectionCard title="Patients - View">
-      <ViewTools lineText="View patients" onAdd={onAdd} />
+      <ViewTools lineText="View patients" onAdd={onAdd} addLabel="Add Patient" />
       <table className="data-table">
         <thead>
           <tr>
@@ -413,7 +489,7 @@ function PatientsEdit({ patients, onEdit, onDelete }) {
 function PrescriptionsView({ prescriptions, onAdd, onEdit, onDispense, onDelete }) {
   return (
     <SectionCard title="Prescriptions - View">
-      <ViewTools lineText="View prescriptions" onAdd={onAdd} />
+      <ViewTools lineText="View prescriptions" onAdd={onAdd} addLabel="Add Prescription" />
       <table className="data-table">
         <thead>
           <tr>
@@ -619,30 +695,104 @@ function PrescriptionsEdit({ prescriptions, inventory, onEdit, onDelete }) {
   );
 }
 
-function ReportsPage({ prescriptions, patients, inventory }) {
+function HomePage({ prescriptions, inventory, patients }) {
   const dispensedCount = prescriptions.filter((p) => p.status === "Dispensed").length;
-  const pendingCount = prescriptions.filter((p) => p.status !== "Dispensed").length;
-  const lowStockCount = inventory.filter((item) => item.stock <= item.minimumStock).length;
+  const pendingPrescriptions = prescriptions.filter((p) => p.status !== "Dispensed");
+  const lowStockItems = inventory.filter((item) => item.stock <= item.minimumStock);
+
+  const duplicatePrescriptionGroups = Object.values(
+    prescriptions
+      .filter((p) => p.status !== "Dispensed")
+      .reduce((acc, prescription) => {
+        const key = `${String(prescription.patientName || "").toLowerCase()}::${String(
+          prescription.medication || ""
+        ).toLowerCase()}`;
+
+        if (!acc[key]) {
+          acc[key] = {
+            patientName: prescription.patientName,
+            medication: prescription.medication,
+            count: 0
+          };
+        }
+
+        acc[key].count += 1;
+        return acc;
+      }, {})
+  ).filter((group) => group.count > 1);
 
   return (
-    <SectionCard title="Reports">
+    <SectionCard title="Home Dashboard">
       <div className="stats-grid">
         <article className="stat-box">
-          <h3>Total Patients</h3>
-          <p>{patients.length}</p>
-        </article>
-        <article className="stat-box">
-          <h3>Pending Prescriptions</h3>
-          <p>{pendingCount}</p>
+          <h3>Undispensed Prescriptions</h3>
+          <p>{pendingPrescriptions.length}</p>
         </article>
         <article className="stat-box">
           <h3>Dispensed Prescriptions</h3>
           <p>{dispensedCount}</p>
         </article>
         <article className="stat-box">
-          <h3>Low Stock Medications</h3>
-          <p>{lowStockCount}</p>
+          <h3>Low Stock Alerts</h3>
+          <p>{lowStockItems.length}</p>
         </article>
+        <article className="stat-box">
+          <h3>Possible Duplicates</h3>
+          <p>{duplicatePrescriptionGroups.length}</p>
+        </article>
+        <article className="stat-box">
+          <h3>Total Patients</h3>
+          <p>{patients.length}</p>
+        </article>
+      </div>
+
+      <div className="dashboard-grid">
+        <section className="alert-panel">
+          <h3>Undispensed Prescriptions</h3>
+          {pendingPrescriptions.length === 0 ? (
+            <p className="empty-alert">No pending prescriptions.</p>
+          ) : (
+            <ul className="alert-list">
+              {pendingPrescriptions.slice(0, 8).map((prescription) => (
+                <li key={prescription._id}>
+                  <strong>{prescription.patientName}</strong> - {prescription.medication} x
+                  {prescription.quantity}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="alert-panel">
+          <h3>Low Stock Medications</h3>
+          {lowStockItems.length === 0 ? (
+            <p className="empty-alert">No low stock medications.</p>
+          ) : (
+            <ul className="alert-list">
+              {lowStockItems.slice(0, 8).map((item) => (
+                <li key={item._id}>
+                  <strong>{item.medicationName}</strong> - Stock {item.stock} / Min {item.minimumStock}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="alert-panel">
+          <h3>Duplicate Prescription Warning</h3>
+          {duplicatePrescriptionGroups.length === 0 ? (
+            <p className="empty-alert">No duplicate pending prescriptions detected.</p>
+          ) : (
+            <ul className="alert-list">
+              {duplicatePrescriptionGroups.slice(0, 8).map((group, idx) => (
+                <li key={`${group.patientName}-${group.medication}-${idx}`}>
+                  <strong>{group.patientName}</strong> has {group.count} pending prescriptions for
+                  <strong> {group.medication}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </SectionCard>
   );
@@ -906,7 +1056,12 @@ function AppShell({ currentUser, onLogout }) {
       <AppHeader currentUser={currentUser} onLogout={onLogout} />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/inventory/view" replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+
+          <Route
+            path="/home"
+            element={<HomePage prescriptions={prescriptions} inventory={inventory} patients={patients} />}
+          />
 
           <Route
             path="/inventory/view"
@@ -978,12 +1133,7 @@ function AppShell({ currentUser, onLogout }) {
             }
           />
 
-          <Route
-            path="/reports"
-            element={<ReportsPage prescriptions={prescriptions} patients={patients} inventory={inventory} />}
-          />
-
-          <Route path="*" element={<Navigate to="/inventory/view" replace />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </main>
 
